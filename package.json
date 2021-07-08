@@ -25,7 +25,7 @@
     "start": "node src/index"
   },
   "dependencies": {
-    "@octokit/rest": "^16.24.3",
+    "@octokit/rest": "^18.6.7",
     "chalk": "^2.4.2",
     "clubhouse-lib": "^0.5.0",
     "meow": "^5.0.0",

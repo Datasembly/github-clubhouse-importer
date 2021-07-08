@@ -10,12 +10,13 @@ const cli = meow(
 	Options
     --github-token=<token>       Github API Token, must have repository scope
     --clubhouse-token=<token>    Clubhouse API Token
-    --github-url=<onwer/name>    Github repository owner/name, e.g. facebook/react
+    --github-repo=<name>         Github repository name, e.g. frontend (Do not include Datasembly/)
     --clubhouse-project=<id>     ID of Clubhouse Project to import issues into
     --state=<open|closed|all>    Github issue state to import
+    --label=<label>              Github label to import
 
 	Examples
-    $ ghch --state=open --github-url=facebook/react --clubhouse-project=4 --github-token=xxx --clubhouse-token=xxx
+    $ ghch --state=open --label=migrate --github-repo=frontend --clubhouse-project=4 --github-token=xxx --clubhouse-token=xxx
 `,
   {
     flags: {
@@ -25,7 +26,7 @@ const cli = meow(
       clubhouseToken: {
         type: 'string',
       },
-      githubUrl: {
+      githubRepo: {
         type: 'string',
       },
       clubhouseProject: {
@@ -34,6 +35,9 @@ const cli = meow(
       state: {
         type: 'string',
         default: 'open',
+      },
+      label: {
+        type: 'string'
       },
     },
   }

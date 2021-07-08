@@ -1,39 +1,22 @@
 const { Octokit } = require('@octokit/rest')
 const Clubhouse = require('clubhouse-lib')
-const ora = require('ora')
 const chalk = require('chalk')
 
 const log = console.log
 
-const githubClubhouseImport = options => {
-  validateOptions(options)
+async function fetchGithubIssues(options) {
   const octokit = new Octokit({
     auth: options.githubToken,
   })
 
-  const [owner, repo] = options.githubUrl.split('/')
+  const repo = options.githubRepo
+  const owner = 'Datasembly'
+  const label = options.label
+  const q = `label:"${label}"+state:open+org:${owner}+repo:${owner}/${repo}`
 
-  function fetchGithubIssues() {
-    const octokitOptions = octokit.issues.listForRepo.endpoint.merge({
-      owner,
-      repo,
-      per_page: 100,
-      state: options.state,
-    })
-    return octokit
-      .paginate(octokitOptions)
-      .then(data => {
-        const issues = data.filter(issue => !issue.pull_request)
-        return issues
-      })
-      .catch(err => {
-        spinner.fail(
-          `Failed to fetch issues from ${chalk.underline(options.githubUrl)}\n`
-        )
-        log(chalk.red(err))
-      })
-  }
+  log(chalk.green(`Constructed search query: ${q}`))
 
+<<<<<<< HEAD
   function importIssuesToClubhouse(issues) {
     const clubhouse = Clubhouse.create(options.clubhouseToken)
     return clubhouse
@@ -42,6 +25,24 @@ const githubClubhouseImport = options => {
         let issuesImported = 0
         return Promise.all(
           issues.map(({ created_at, updated_at, labels, title, body, html_url, number }) => {
+=======
+  const { data: data } = await octokit.rest.search.issuesAndPullRequests({
+    q,
+    per_page: 10,
+  })
+  return data
+}
+
+function importIssuesToClubhouse(issues, options) {
+  const clubhouse = Clubhouse.create(options.clubhouseToken)
+  return clubhouse
+    .getProject(options.clubhouseProject)
+    .then((project) => {
+      let issuesImported = 0
+      return Promise.all(
+        issues.map(
+          ({ created_at, updated_at, labels, title, body, html_url }) => {
+>>>>>>> search
             const story_type = getStoryType(labels)
             return reflect(
               clubhouse
@@ -52,6 +53,7 @@ const githubClubhouseImport = options => {
                   name: title,
                   description: body,
                   external_id: html_url,
+                  external_links: [html_url],
                   project_id: project.id,
                 })
                 .then(() => (issuesImported = issuesImported + 1))
@@ -59,37 +61,32 @@ const githubClubhouseImport = options => {
                   log(chalk.red(`Failed to import issue #${number}`))
                 })
             )
-          })
-        ).then(() => {
-          return issuesImported
-        })
-      })
-      .catch(() => {
-        log(
-          chalk.red(
-            `Clubhouse Project ID ${
-              options.clubhouseProject
-            } could not be found`
-          )
+          }
         )
+      ).then(() => {
+        return issuesImported
       })
-  }
-
-  const githubSpinner = ora('Retrieving issues from Github').start()
-  fetchGithubIssues().then(issues => {
-    githubSpinner.succeed(
-      `Retrieved ${chalk.bold(issues.length)} issues from Github`
-    )
-    const clubhouseSpinner = ora('Importing issues into Clubhouse').start()
-    importIssuesToClubhouse(issues).then(issuesImported => {
-      clubhouseSpinner.succeed(
-        `Imported ${chalk.bold(issuesImported)} issues into Clubhouse`
+    })
+    .catch(() => {
+      log(
+        chalk.red(
+          `Clubhouse Project ID ${options.clubhouseProject} could not be found`
+        )
       )
     })
-  })
 }
 
-const validateOptions = options => {
+const githubClubhouseImport = async (options) => {
+  validateOptions(options)
+
+  const issues = await fetchGithubIssues(options)
+  log(`Retrieved ${chalk.bold(issues.total_count)} issues from Github`)
+
+  log(`Importing issues to Clubhouse`)
+  importIssuesToClubhouse(issues.items, options)
+}
+
+const validateOptions = (options) => {
   let hasError = false
   if (!options.githubToken) {
     hasError = true
@@ -108,9 +105,14 @@ const validateOptions = options => {
     )
   }
 
-  if (!options.githubUrl) {
+  if (!options.githubRepo) {
     hasError = true
-    log(chalk.red(`Usage: ${chalk.bold('--github-url')} arg is required`))
+    log(chalk.red(`Usage: ${chalk.bold('--github-repo')} arg is required`))
+  }
+
+  if (!options.label) {
+    hasError = true
+    log(chalk.red(`Usage: ${chalk.bold('--label')} arg is required`))
   }
 
   if (!['open', 'closed', 'all'].includes(options.state.toLowerCase())) {
@@ -129,12 +131,15 @@ const validateOptions = options => {
 }
 
 function getStoryType(labels) {
-  if (labels.find(label => label.name.includes('bug'))) return 'bug'
-  if (labels.find(label => label.name.includes('chore'))) return 'chore'
+  if (labels.find((label) => label.name.includes('bug'))) return 'bug'
+  if (labels.find((label) => label.name.includes('chore'))) return 'chore'
   return 'feature'
 }
 
-const reflect = p =>
-  p.then(v => ({ v, status: 'fulfilled' }), e => ({ e, status: 'rejected' }))
+const reflect = (p) =>
+  p.then(
+    (v) => ({ v, status: 'fulfilled' }),
+    (e) => ({ e, status: 'rejected' })
+  )
 
 module.exports.default = githubClubhouseImport
