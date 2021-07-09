@@ -16,16 +16,6 @@ async function fetchGithubIssues(options) {
 
   log(chalk.green(`Constructed search query: ${q}`))
 
-<<<<<<< HEAD
-  function importIssuesToClubhouse(issues) {
-    const clubhouse = Clubhouse.create(options.clubhouseToken)
-    return clubhouse
-      .getProject(options.clubhouseProject)
-      .then(project => {
-        let issuesImported = 0
-        return Promise.all(
-          issues.map(({ created_at, updated_at, labels, title, body, html_url, number }) => {
-=======
   const { data: data } = await octokit.rest.search.issuesAndPullRequests({
     q,
     per_page: 10,
@@ -42,7 +32,6 @@ function importIssuesToClubhouse(issues, options) {
       return Promise.all(
         issues.map(
           ({ created_at, updated_at, labels, title, body, html_url }) => {
->>>>>>> search
             const story_type = getStoryType(labels)
             return reflect(
               clubhouse
